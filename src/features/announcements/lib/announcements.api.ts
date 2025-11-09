@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createClient, type SupabaseBrowserClient } from '@/lib/supabase/client';
 import type { Announcement, AnnouncementMetrics } from '../types';
 import type { CreateAnnouncementInput, UpdateAnnouncementInput } from '../schema';
 import {
@@ -8,6 +8,38 @@ import {
 } from '../constants';
 
 const supabase = createClient();
+const isSupabaseConfigured = Boolean(supabase);
+
+const fallbackAnnouncements: Announcement[] = [
+  {
+    id: 'mock-1',
+    title: '설 연휴 운영 안내',
+    body: '설 연휴 동안 본사 물류 일정이 변경됩니다. 주문 마감일을 확인해주세요.',
+    attachments: [],
+    targetType: 'all',
+    targetStores: [],
+    targetGroups: [],
+    status: 'published',
+    createdBy: 'hq-admin',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-2',
+    title: '신메뉴 시식 교육 일정',
+    body: '직영점 교육장에서 신메뉴 시식 교육이 진행됩니다. 점주님들의 참여를 부탁드립니다.',
+    attachments: [],
+    targetType: 'store',
+    targetStores: ['store-1', 'store-2'],
+    targetGroups: [],
+    status: 'published',
+    createdBy: 'hq-education',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
+  },
+];
 
 function transformAnnouncement(data: any): Announcement {
   return {
@@ -29,6 +61,23 @@ function transformAnnouncement(data: any): Announcement {
 export async function createAnnouncement(
   payload: CreateAnnouncementInput,
 ): Promise<Announcement> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      id: `mock-${Date.now()}`,
+      title: payload.title,
+      body: payload.body,
+      attachments: payload.attachments ?? [],
+      targetType: payload.targetType,
+      targetStores: payload.targetStores ?? [],
+      targetGroups: payload.targetGroups ?? [],
+      status: payload.status,
+      createdBy: 'mock-user',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      publishedAt: payload.status === 'published' ? new Date().toISOString() : undefined,
+    };
+  }
+
   const insertData = {
     title: payload.title,
     body: payload.body,
@@ -39,9 +88,11 @@ export async function createAnnouncement(
     status: payload.status,
   };
 
-  const { data, error } = await supabase
+  const client = supabase as SupabaseBrowserClient;
+
+  const { data, error } = await client
     .from(ANNOUNCEMENT_TABLE_NAME)
-    .insert(insertData)
+    .insert(insertData as any)
     .select()
     .single();
 
@@ -53,7 +104,13 @@ export async function createAnnouncement(
 }
 
 export async function getAnnouncements(): Promise<Announcement[]> {
-  const { data, error } = await supabase
+  if (!isSupabaseConfigured || !supabase) {
+    return fallbackAnnouncements;
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
+  const { data, error } = await client
     .from(ANNOUNCEMENT_TABLE_NAME)
     .select('*')
     .order('created_at', { ascending: false });
@@ -66,7 +123,13 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 }
 
 export async function getAnnouncementById(id: string): Promise<Announcement> {
-  const { data, error } = await supabase
+  if (!isSupabaseConfigured || !supabase) {
+    return fallbackAnnouncements.find((item) => item.id === id) ?? fallbackAnnouncements[0];
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
+  const { data, error } = await client
     .from(ANNOUNCEMENT_TABLE_NAME)
     .select('*')
     .eq('id', id)
@@ -83,6 +146,22 @@ export async function updateAnnouncement(
   id: string,
   payload: UpdateAnnouncementInput,
 ): Promise<Announcement> {
+  if (!isSupabaseConfigured || !supabase) {
+    const existing = fallbackAnnouncements.find((item) => item.id === id);
+    if (!existing) {
+      throw new Error('Mock announcement not found');
+    }
+    return {
+      ...existing,
+      ...payload,
+      attachments: payload.attachments ?? existing.attachments,
+      targetStores: payload.targetStores ?? existing.targetStores,
+      targetGroups: payload.targetGroups ?? existing.targetGroups,
+      updatedAt: new Date().toISOString(),
+      publishedAt: payload.status === 'published' ? new Date().toISOString() : existing.publishedAt,
+    };
+  }
+
   const updateData: any = {
     updated_at: new Date().toISOString(),
   };
@@ -100,9 +179,11 @@ export async function updateAnnouncement(
     }
   }
 
-  const { data, error } = await supabase
+  const client = supabase as SupabaseBrowserClient;
+
+  const { data, error } = await client
     .from(ANNOUNCEMENT_TABLE_NAME)
-    .update(updateData)
+    .update(updateData as any)
     .eq('id', id)
     .select()
     .single();
@@ -115,7 +196,13 @@ export async function updateAnnouncement(
 }
 
 export async function deleteAnnouncement(id: string): Promise<void> {
-  const { error } = await supabase
+  if (!isSupabaseConfigured || !supabase) {
+    return;
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
+  const { error } = await client
     .from(ANNOUNCEMENT_TABLE_NAME)
     .delete()
     .eq('id', id);
@@ -126,7 +213,19 @@ export async function deleteAnnouncement(id: string): Promise<void> {
 }
 
 export async function getAnnouncementsByStore(storeId: string): Promise<Announcement[]> {
-  const { data, error } = await supabase
+  if (!isSupabaseConfigured || !supabase) {
+    return fallbackAnnouncements.filter((item) => {
+      if (item.targetType === 'all') return true;
+      if (item.targetType === 'store') {
+        return item.targetStores?.includes(storeId);
+      }
+      return false;
+    });
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
+  const { data, error } = await client
     .from(ANNOUNCEMENT_TABLE_NAME)
     .select('*')
     .or(`target_type.eq.all,target_stores.cs.{${storeId}}`)
@@ -144,15 +243,24 @@ export async function viewAnnouncement(
   announcementId: string,
   storeId: string,
 ): Promise<void> {
-  const { error } = await supabase
+  if (!isSupabaseConfigured || !supabase) {
+    return;
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
+  const { error } = await client
     .from(ANNOUNCEMENT_VIEWS_TABLE_NAME)
-    .upsert({
-      announcement_id: announcementId,
-      store_id: storeId,
-      viewed_at: new Date().toISOString(),
-    }, {
-      onConflict: 'announcement_id,store_id',
-    });
+    .upsert(
+      {
+        announcement_id: announcementId,
+        store_id: storeId,
+        viewed_at: new Date().toISOString(),
+      } as any,
+      {
+        onConflict: 'announcement_id,store_id',
+      },
+    );
 
   if (error) {
     throw new Error(`공지사항 조회 기록 실패: ${error.message}`);
@@ -163,15 +271,24 @@ export async function acknowledgeAnnouncement(
   announcementId: string,
   storeId: string,
 ): Promise<void> {
-  const { error } = await supabase
+  if (!isSupabaseConfigured || !supabase) {
+    return;
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
+  const { error } = await client
     .from(ANNOUNCEMENT_ACKNOWLEDGMENTS_TABLE_NAME)
-    .upsert({
-      announcement_id: announcementId,
-      store_id: storeId,
-      acknowledged_at: new Date().toISOString(),
-    }, {
-      onConflict: 'announcement_id,store_id',
-    });
+    .upsert(
+      {
+        announcement_id: announcementId,
+        store_id: storeId,
+        acknowledged_at: new Date().toISOString(),
+      } as any,
+      {
+        onConflict: 'announcement_id,store_id',
+      },
+    );
 
   if (error) {
     throw new Error(`공지사항 확인 기록 실패: ${error.message}`);
@@ -181,12 +298,24 @@ export async function acknowledgeAnnouncement(
 export async function getAnnouncementMetrics(
   announcementId: string,
 ): Promise<AnnouncementMetrics> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      announcementId,
+      totalViews: 0,
+      totalAcknowledgments: 0,
+      viewsByStore: {},
+      acknowledgmentsByStore: {},
+    };
+  }
+
+  const client = supabase as SupabaseBrowserClient;
+
   const [viewsResult, acknowledgmentsResult] = await Promise.all([
-    supabase
+    client
       .from(ANNOUNCEMENT_VIEWS_TABLE_NAME)
       .select('store_id, viewed_at')
       .eq('announcement_id', announcementId),
-    supabase
+    client
       .from(ANNOUNCEMENT_ACKNOWLEDGMENTS_TABLE_NAME)
       .select('store_id, acknowledged_at')
       .eq('announcement_id', announcementId),
