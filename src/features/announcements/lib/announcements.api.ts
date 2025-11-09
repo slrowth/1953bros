@@ -1,10 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
-import type {
-  Announcement,
-  CreateAnnouncementPayload,
-  UpdateAnnouncementPayload,
-  AnnouncementMetrics,
-} from '../types';
+import type { Announcement, AnnouncementMetrics } from '../types';
+import type { CreateAnnouncementInput, UpdateAnnouncementInput } from '../schema';
 import {
   ANNOUNCEMENT_TABLE_NAME,
   ANNOUNCEMENT_VIEWS_TABLE_NAME,
@@ -31,7 +27,7 @@ function transformAnnouncement(data: any): Announcement {
 }
 
 export async function createAnnouncement(
-  payload: CreateAnnouncementPayload,
+  payload: CreateAnnouncementInput,
 ): Promise<Announcement> {
   const insertData = {
     title: payload.title,
@@ -85,7 +81,7 @@ export async function getAnnouncementById(id: string): Promise<Announcement> {
 
 export async function updateAnnouncement(
   id: string,
-  payload: UpdateAnnouncementPayload,
+  payload: UpdateAnnouncementInput,
 ): Promise<Announcement> {
   const updateData: any = {
     updated_at: new Date().toISOString(),
@@ -99,7 +95,7 @@ export async function updateAnnouncement(
   if (payload.targetGroups !== undefined) updateData.target_groups = payload.targetGroups;
   if (payload.status !== undefined) {
     updateData.status = payload.status;
-    if (payload.status === 'published' && !payload.publishedAt) {
+    if (payload.status === 'published') {
       updateData.published_at = new Date().toISOString();
     }
   }
