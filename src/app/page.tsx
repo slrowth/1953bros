@@ -1,18 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+   import { useState } from 'react';
 
-export default function Home() {
-  const router = useRouter();
+   export default function AnnouncementsPage() {
+     const [userRole] = useState<'HQ' | 'Store'>('HQ');
+     const storeId = userRole === 'Store' ? 'store-dummy-id' : undefined;
 
-  useEffect(() => {
-    router.push('/dashboard');
-  }, [router]);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>리다이렉트 중...</p>
-    </div>
-  );
-}
+     return (
+       <AnnouncementList storeId={storeId} />
+       // ...
+     );
+   }
