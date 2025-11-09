@@ -39,23 +39,3 @@ export interface AnnouncementMetrics {
   acknowledgmentsByStore: Record<string, string>;
 }
 
-export interface CreateAnnouncementPayload {
-  title: string;
-  body: string;
-  attachments?: string[];
-  targetType: AnnouncementTargetType;
-  targetStores?: string[];
-  targetGroups?: string[];
-  status: AnnouncementStatus;
-}
-
-export interface UpdateAnnouncementPayload {
-  title?: string;
-  body?: string;
-  attachments?: string[];
-  targetType?: AnnouncementTargetType;
-  targetStores?: string[];
-  targetGroups?: string[];
-  status?: AnnouncementStatus;
-}
-

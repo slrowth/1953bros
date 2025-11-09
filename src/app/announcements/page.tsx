@@ -5,10 +5,12 @@ import { AnnouncementList } from '@/features/announcements/components/Announceme
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function AnnouncementsPage() {
   const router = useRouter();
-  const userRole: 'HQ' | 'Store' = 'HQ';
+  const [userRole] = useState<'HQ' | 'Store'>('HQ');
+  const storeId = userRole === 'Store' ? 'store-dummy-id' : undefined;
 
   return (
     <AppLayout userRole={userRole} userName={userRole === 'HQ' ? '본사 관리자' : '매장 점주'}>
@@ -30,7 +32,7 @@ export default function AnnouncementsPage() {
           )}
         </div>
 
-        <AnnouncementList storeId={userRole === 'Store' ? 'store-dummy-id' : undefined} />
+        <AnnouncementList storeId={storeId} />
       </div>
     </AppLayout>
   );

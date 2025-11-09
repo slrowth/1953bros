@@ -8,10 +8,9 @@ import {
   updateAnnouncement,
   deleteAnnouncement,
   getAnnouncementsByStore,
-  type CreateAnnouncementPayload,
-  type UpdateAnnouncementPayload,
 } from '../lib/announcements.api';
 import type { Announcement } from '../types';
+import type { CreateAnnouncementInput, UpdateAnnouncementInput } from '../schema';
 
 export function useAnnouncements() {
   return useQuery({
@@ -40,7 +39,7 @@ export function useCreateAnnouncement() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateAnnouncementPayload) => createAnnouncement(payload),
+    mutationFn: (payload: CreateAnnouncementInput) => createAnnouncement(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
     },
@@ -51,7 +50,7 @@ export function useUpdateAnnouncement() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateAnnouncementPayload }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateAnnouncementInput }) =>
       updateAnnouncement(id, payload),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] });
